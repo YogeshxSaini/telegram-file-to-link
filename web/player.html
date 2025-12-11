@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HLS Player</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      .wrap { max-width: 900px; margin: 0 auto; }
+      video { width: 100%; max-height: 70vh; background: #000; }
+      input[type=url] { width: 100%; padding: 0.6rem; font-size: 1rem; }
+      button { padding: 0.6rem 1rem; font-size: 1rem; }
+      .row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>HLS Player</h1>
+      <video id="video" controls playsinline></video>
+      <div class="row">
+        <input id="url" type="url" placeholder="https://<your-domain>/videos/<video_id>/playlist.m3u8" />
+        <button id="load">Load</button>
+      </div>
+      <p>Tip: You can pass <code>?url=...</code> in the query string.</p>
+    </div>
+    <script>
+      function getParam(name) {
+        const u = new URL(window.location.href);
+        return u.searchParams.get(name);
+      }
+      function load(url) {
+        const video = document.getElementById('video');
+        if (Hls.isSupported()) {
+          const hls = new Hls({ enableWorker: true });
+          hls.loadSource(url);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, function () { video.play(); });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = url; video.play();
+        } else {
+          alert('HLS not supported in this browser.');
+        }
+      }
+      document.getElementById('load').addEventListener('click', () => {
+        const url = document.getElementById('url').value.trim();
+        if (url) load(url);
+      });
+      const u = getParam('url');
+      if (u) {
+        document.getElementById('url').value = u;
+        load(u);
+      }
+    </script>
+  </body>
+  </html>
