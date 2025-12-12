@@ -185,7 +185,13 @@ async def handle_message(client: TelegramClient, event):
             pass
 
     try:
-        await client.download_media(msg, file=str(input_path), progress_callback=_progress)
+        part_kb = int(os.getenv("TELETHON_PART_SIZE_KB", "512"))
+        # Prefer download_file for tuning part size; falls back to download_media.
+        media = getattr(msg, "media", None)
+        if media is not None:
+            await client.download_file(media, file=str(input_path), part_size_kb=part_kb, progress_callback=_progress)
+        else:
+            await client.download_media(msg, file=str(input_path), progress_callback=_progress)
     except Exception as e:
         logging.exception("Download failed: %s", e)
         return
