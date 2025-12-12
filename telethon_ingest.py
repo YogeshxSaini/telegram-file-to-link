@@ -173,19 +173,30 @@ async def handle_message(client: TelegramClient, event):
         await client.send_message(entity=msg.chat_id, message=f"⏳ Received video {video_id}. Downloading…")
     except Exception:
         pass
+    _last_progress = {"t": None, "r": 0}
     def _progress(received: int, total: int):
         try:
+            import time
+            now = time.time()
             pct = (received / total * 100) if total else 0
-            if received == 0 or received == total or received % (50 * 1024 * 1024) == 0:  # every ~50MB
-                logging.info("Downloading… %s / %s (%.1f%%)",
-                             f"{received/1024/1024:.1f}MB",
-                             f"{(total or 0)/1024/1024:.1f}MB",
-                             pct)
+            # log every ~50MB or at start/end
+            if (received == 0 or received == total or received - _last_progress["r"] >= 50 * 1024 * 1024):
+                mb = received/1024/1024
+                totmb = (total or 0)/1024/1024
+                rate = ""
+                if _last_progress["t"]:
+                    dt = max(now - _last_progress["t"], 1e-6)
+                    dr = received - _last_progress["r"]
+                    mbs = (dr/1024/1024)/dt
+                    rate = f" @ {mbs:.2f} MB/s"
+                logging.info("Downloading… %.1fMB / %.1fMB (%.1f%%)%s", mb, totmb, pct, rate)
+                _last_progress["t"] = now
+                _last_progress["r"] = received
         except Exception:
             pass
 
     try:
-        part_kb = int(os.getenv("TELETHON_PART_SIZE_KB", "512"))
+        part_kb = int(os.getenv("TELETHON_PART_SIZE_KB", "2048"))
         # Prefer download_file for tuning part size; falls back to download_media.
         media = getattr(msg, "media", None)
         if media is not None:
