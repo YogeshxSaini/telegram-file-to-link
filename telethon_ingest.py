@@ -173,8 +173,19 @@ async def handle_message(client: TelegramClient, event):
         await client.send_message(entity=msg.chat_id, message=f"⏳ Received video {video_id}. Downloading…")
     except Exception:
         pass
+    def _progress(received: int, total: int):
+        try:
+            pct = (received / total * 100) if total else 0
+            if received == 0 or received == total or received % (50 * 1024 * 1024) == 0:  # every ~50MB
+                logging.info("Downloading… %s / %s (%.1f%%)",
+                             f"{received/1024/1024:.1f}MB",
+                             f"{(total or 0)/1024/1024:.1f}MB",
+                             pct)
+        except Exception:
+            pass
+
     try:
-        await client.download_media(msg, file=str(input_path))
+        await client.download_media(msg, file=str(input_path), progress_callback=_progress)
     except Exception as e:
         logging.exception("Download failed: %s", e)
         return
